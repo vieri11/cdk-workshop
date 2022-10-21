@@ -38,5 +38,8 @@ public class WorkshopPipelineStack extends Stack {
                                 "npx cdk synth"           // Synth command (always same)
                         )).build())
                 .build();
+
+        final WorkshopPipelineStage deploy = new WorkshopPipelineStage(this, "Deploy");
+        pipeline.addStage(deploy);
     }
 }
