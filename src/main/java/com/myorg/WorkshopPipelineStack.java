@@ -1,8 +1,13 @@
 package com.myorg;
 
+import java.util.List;
+
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.pipelines.CodeBuildStep;
+import software.amazon.awscdk.pipelines.CodePipeline;
+import software.amazon.awscdk.pipelines.CodePipelineSource;
 
 import software.amazon.awscdk.services.codecommit.Repository;
 
@@ -19,6 +24,19 @@ public class WorkshopPipelineStack extends Stack {
                 .repositoryName("WorkshopRepo")
                 .build();
 
-        // Pipeline code goes here
+        // The basic pipeline declaration. This sets the initial structure
+        // of our pipeline
+        final CodePipeline pipeline = CodePipeline.Builder.create(this, "Pipeline")
+                .pipelineName("WorkshopPipeline")
+                .synth(CodeBuildStep.Builder.create("SynthStep")
+                        .input(CodePipelineSource.codeCommit(repo, "main"))
+                        .installCommands(List.of(
+                                "npm install -g aws-cdk"   // Commands to run before build
+                        ))
+                        .commands(List.of(
+                                "mvn package",            // Language-specific build commands
+                                "npx cdk synth"           // Synth command (always same)
+                        )).build())
+                .build();
     }
 }
