@@ -1,6 +1,7 @@
 package com.myorg;
 
 import java.util.List;
+import java.util.Map;
 
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
@@ -8,8 +9,9 @@ import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.pipelines.CodeBuildStep;
 import software.amazon.awscdk.pipelines.CodePipeline;
 import software.amazon.awscdk.pipelines.CodePipelineSource;
-
+import software.amazon.awscdk.pipelines.StageDeployment;
 import software.amazon.awscdk.services.codecommit.Repository;
+import software.amazon.awscdk.services.codepipeline.actions.CodeCommitSourceAction;
 
 public class WorkshopPipelineStack extends Stack {
     public WorkshopPipelineStack(final Construct parent, final String id) {
@@ -38,8 +40,26 @@ public class WorkshopPipelineStack extends Stack {
                                 "npx cdk synth"           // Synth command (always same)
                         )).build())
                 .build();
-
+        
         final WorkshopPipelineStage deploy = new WorkshopPipelineStage(this, "Deploy");
-        pipeline.addStage(deploy);
+        StageDeployment stageDeployment = pipeline.addStage(deploy);
+
+        stageDeployment.addPost(
+                CodeBuildStep.Builder.create("TestViewerEndpoint")
+                        .projectName("TestViewerEndpoint")
+                        .commands(List.of("curl -Ssf $ENDPOINT_URL"))
+                        .envFromCfnOutputs(Map.of("ENDPOINT_URL",  deploy.hcViewerUrl))
+                        .build(),
+
+                CodeBuildStep.Builder.create("TestAPIGatewayEndpoint")
+                        .projectName("TestAPIGatewayEndpoint")
+                        .envFromCfnOutputs(Map.of("ENDPOINT_URL",  deploy.hcEndpoint))
+                        .commands(List.of(
+                                "curl -Ssf $ENDPOINT_URL",
+                                "curl -Ssf $ENDPOINT_URL/hello",
+                                "curl -Ssf $ENDPOINT_URL/test"
+                        ))
+                        .build()
+        );
     }
 }
